@@ -1,8 +1,8 @@
 /**************************************************************
 * Class:  CSC-415
-* Name: Professor Bierman
-* Student ID: N/A
-* Project: Basic File System
+* Name: Professor Bierman, 
+* Student ID: 
+* Project: Basic File System 
 *
 * File: fsShell.c
 *
@@ -34,45 +34,38 @@
 	
 	#include <sys/stat.h>
 	#include <dirent.h>
-	#define fs_mkdir	mkdir
-	#define fs_getcwd	getcwd
-	#define fs_setcwd	chdir
-	#define fs_rmdir	rmdir
-	#define fs_delete unlink
+	#define mfs_mkdir	mkdir
+	#define mfs_getcwd	getcwd
+	#define mfs_setcwd	chdir
+	#define mfs_rmdir	rmdir
+	#define mfs_delete unlink
 	
 	
-	fdDir * fs_opendir(const char *name)
+	mfs_DIR * mfs_opendir(const char *name)
 		{
 		DIR * dir;
 		dir = opendir(name);
-		return ((fdDir *) dir);
+		return ((mfs_DIR *) dir);
 		}
-	
-	struct fs_diriteminfo fsDi;	
-	struct fs_diriteminfo *fs_readdir(fdDir *dirp)
+		
+	struct mfs_dirent *mfs_readdir(mfs_DIR *dirp)
 		{
 		DIR *dir;
 		dir = (DIR *) dirp;
 		struct dirent * de;
 		de = readdir (dir);
-		if (de == NULL)
-			return (NULL);
-			
-			
-		fsDi.d_reclen = (unsigned short) sizeof (fsDe);
-		fsDi.fileType = de->d_type;
-		strcpy(fsDi.d_name, de->d_name);
-		return (&fsDi);
+		
+		return ((struct mfs_dirent *)de);
 		}
 		
-	int fs_closedir(fs_DIR *dirp)
+	int mfs_closedir(mfs_DIR *dirp)
 		{
 		DIR *dir;
 		dir = (DIR *) dirp;
 		return (closedir (dir));
 		}
 
-	int fs_stat(const char *path, struct fs_stat *buf)
+	int mfs_stat(const char *path, struct mfs_stat *buf)
 		{
 		struct stat * path_stat;
 		path_stat = (struct stat *) buf;
@@ -80,14 +73,14 @@
 		}
 
 	
-	int fs_isFile (char * path)
+	int mfs_isFile (char * path)
 		{
 		struct stat path_stat;
 		stat(path, &path_stat);
 		return S_ISREG(path_stat.st_mode);
 		}
 	
-	int fs_isDir (char * path)
+	int mfs_isDir (char * path)
 		{
 		struct stat path_stat;
 		if (stat(path, &path_stat) != 0)
@@ -154,33 +147,33 @@ dispatch_t dispatchTable[] = {
 static int dispatchcount = sizeof (dispatchTable) / sizeof (dispatch_t);
 
 // Display files for use by ls command
-int displayFiles (fdDir * dirp, int flall, int fllong)
+int displayFiles (mfs_DIR * dirp, int flall, int fllong)
 	{
 	if (dirp == NULL)	//get out if error
 		return (-1);
 	
-	struct fs_diriteminfo * di;
-	struct fs_stat statbuf;
+	struct mfs_dirent * de;
+	struct mfs_stat statbuf;
 	
-	di = fs_readdir (dirp);
+	de = mfs_readdir (dirp);
 	printf("\n");
-	while (di != NULL) 
+	while (de != NULL) 
 		{
-		if ((di->d_name[0] != '.') || (flall)) //if not all and starts with '.' it is hidden
+		if ((de->d_name[0] != '.') || (flall)) //if not all and starts with '.' it is hidden
 			{
 			if (fllong)
 				{
-				fs_stat (di->d_name, &statbuf);
-				printf ("%s    %9ld   %s\n", fs_isDir(di->d_name)?"D":"-", statbuf.st_size, di->d_name);
+				mfs_stat (de->d_name, &statbuf);
+				printf ("%s    %9ld   %s\n", mfs_isDir(de->d_name)?"D":"-", statbuf.st_size, de->d_name);
 				}
 			else
 				{
-				printf ("%s\n", di->d_name);
+				printf ("%s\n", de->d_name);
 				}
 			}
-		di = fs_readdir (dirp);
+		de = mfs_readdir (dirp);
 		}
-	fs_closedir (dirp);
+	mfs_closedir (dirp);
 	return 0;
 	}
 	
@@ -261,15 +254,15 @@ int cmd_ls (int argcnt, char *argvec[])
 		//processing arguments after options
 		for (int k = optind; k < argcnt; k++)
 			{
-			if (fs_isDir(argvec[k]))
+			if (mfs_isDir(argvec[k]))
 				{
-				fdDir * dirp;
-				dirp = fs_opendir (argvec[k]);
+				mfs_DIR * dirp;
+				dirp = mfs_opendir (argvec[k]);
 				displayFiles (dirp, flall, fllong);
 				}
 			else // it is just a file ?
 				{
-				if (fs_isFile (argvec[k]))
+				if (mfs_isFile (argvec[k]))
 					{
 					//no support for long format here
 					printf ("%s\n", argvec[k]);
@@ -283,9 +276,9 @@ int cmd_ls (int argcnt, char *argvec[])
 		}
 	else   // no pathname/filename specified - use cwd
 		{
-		char * path = fs_getcwd(cwd, DIRMAX_LEN);	//get current working directory
-		fdDir * dirp;
-		dirp = fs_opendir (path);
+		char * path = mfs_getcwd(cwd, DIRMAX_LEN);	//get current working directory
+		mfs_DIR * dirp;
+		dirp = mfs_opendir (path);
 		return (displayFiles (dirp, flall, fllong));
 		}
 	return 0;
@@ -363,7 +356,7 @@ int cmd_md (int argcnt, char *argvec[])
 		}
 	else
 		{
-		return(fs_mkdir(argvec[1], 0777));
+		return(mfs_mkdir(argvec[1], 0777));
 		}
 #endif
 	}
@@ -383,13 +376,13 @@ int cmd_rm (int argcnt, char *argvec[])
 	char * path = argvec[1];	
 	
 	//must determine if file or directory
-	if (fs_isDir (path))
+	if (mfs_isDir (path))
 		{
-		return (fs_rmdir (path));
+		return (mfs_rmdir (path));
 		}		
-	if (fs_isFile (path))
+	if (mfs_isFile (path))
 		{
-		return (fs_delete(path));
+		return (mfs_delete(path));
 		}	
 		
 	printf("The path %s is neither a file not a directory\n", path);
@@ -429,10 +422,10 @@ int cmd_cp2l (int argcnt, char *argvec[])
 	
 	
 	testfs_fd = b_open (src, O_RDONLY);
-	linux_fd = open (dest, O_WRONLY | O_CREAT | O_TRUNC);
+	linux_fd = open (dest, O_WRONLY | O_CREAT | O_TRUNC, 0666);
 	do 
 		{
-		readcnt = b_read (testfs_fd, buf, BUFFERLEN);
+		readcnt = readcnt = b_read (testfs_fd, buf, BUFFERLEN);
 		write (linux_fd, buf, readcnt);
 		} while (readcnt == BUFFERLEN);
 	b_close (testfs_fd);
@@ -477,6 +470,7 @@ int cmd_cp2fs (int argcnt, char *argvec[])
 	do 
 		{
 		readcnt = read (linux_fd, buf, BUFFERLEN);
+		
 		b_write (testfs_fd, buf, readcnt);
 		} while (readcnt == BUFFERLEN);
 	b_close (testfs_fd);
@@ -507,7 +501,7 @@ int cmd_cd (int argcnt, char *argvec[])
 			path[strlen(path) - 1] = 0;
 			}
 		}
-	int ret = fs_setcwd (path);
+	int ret = mfs_setcwd (path);
 	if (ret != 0)	//error
 		{
 		printf ("Could not change path to %s\n", path);
@@ -525,7 +519,7 @@ int cmd_pwd (int argcnt, char *argvec[])
 #if (CMDPWD_ON == 1)
 	char * dir_buf = malloc (DIRMAX_LEN +1);
 	char * ptr;	
-	ptr = fs_getcwd (dir_buf, DIRMAX_LEN);	
+	ptr = mfs_getcwd (dir_buf, DIRMAX_LEN);	
 	if (ptr == NULL)			//an error occurred
 		{
 		printf ("An error occurred while trying to get the current working directory\n");
@@ -671,6 +665,7 @@ void processcommand (char * cmd)
 		if (strcmp(dispatchTable[i].command, cmdv[0]) == 0)
 			{
 			dispatchTable[i].func(cmdc,cmdv);
+			printf("End dispatch\n");
 			free (cmdv);
 			cmdv = NULL;
 			return;
@@ -682,7 +677,15 @@ void processcommand (char * cmd)
 	cmdv = NULL;
 	}
 
+void initializeFileSystem() {
+	openVolume("SampleVolume");
+	mfs_init();
+}
 
+void closeFileSystem() {
+	mfs_close();
+	closeVolume();
+}
 
 int main (int argc, char * argv[])
 	{
@@ -692,6 +695,8 @@ int main (int argc, char * argv[])
 		
 	using_history();
 	stifle_history(200);	//max history entries
+
+	initializeFileSystem();
 	
 	while (1)
 		{
@@ -726,4 +731,7 @@ int main (int argc, char * argv[])
 		free (cmd);
 		cmd = NULL;		
 		} // end while
+
+		closeFileSystem();
+
 	}
