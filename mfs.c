@@ -129,9 +129,9 @@ mfs_DIR* getInode(const char *pathname){
   // Loop and find requested node, return that node return Null if does not exists
   printf("Searching path: '%s'\n", pathname);
   for (size_t i = 0; i < getVCB()->inodes; i++) {
-    // printf("\tInode path: '%s'\n", inodes[i].path);
+    printf("\tInode path: '%s'\n", inodes[i].path);
     if (strcmp(inodes[i].path, pathname) == 0) {
-      printf("\tInode path: '%s'\n", inodes[i].path);
+      //printf("\tInode path: '%s'\n", inodes[i].path);
       printf(" ");
       return &inodes[i];
     }

@@ -287,7 +287,7 @@ int cmd_ls (int argcnt, char *argvec[])
 
 	
 /****************************************************
-*  Copy file commmand
+*  Copy file command
 ****************************************************/
 	
 int cmd_cp (int argcnt, char *argvec[])
@@ -376,11 +376,11 @@ int cmd_rm (int argcnt, char *argvec[])
 	char * path = argvec[1];	
 	
 	//must determine if file or directory
-	if (mfs_isDir (path))
+	if (mfs_isDir(path))
 		{
-		return (mfs_rmdir (path));
+		return (mfs_rmdir(path));
 		}		
-	if (mfs_isFile (path))
+	if (mfs_isFile(path))
 		{
 		return (mfs_delete(path));
 		}	
