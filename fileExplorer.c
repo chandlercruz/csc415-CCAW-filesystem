@@ -61,7 +61,7 @@ int main(int argc, char* argv[]) {
 
   mfs_init();
 
-  for(int i=0; i<getVCB()->totalInodes; i++) {
+  for(int i=0; i<getVCB()->inodes; i++) {
     mfs_DIR* inode = getInodeByID(i);
     printInode(inode);
   }
