@@ -125,11 +125,11 @@ void printFilePath() {
 }
 
 mfs_DIR* getInode(const char *pathname){
-  printf("Getting Inode......");
+  printf("Getting Inode......\n");
   // Loop and find requested node, return that node return Null if does not exists
   printf("Searching path: '%s'\n", pathname);
   for (size_t i = 0; i < getVCB()->inodes; i++) {
-    //printf("\tInode path: '%s'\n", inodes[i].path);
+    // printf("\tInode path: '%s'\n", inodes[i].path);
     if (strcmp(inodes[i].path, pathname) == 0) {
       printf("\tInode path: '%s'\n", inodes[i].path);
       printf(" ");
@@ -198,9 +198,10 @@ mfs_DIR* createInode(InodeType type, const char* path){
     printf("Error, reverting changes.\n");
     return NULL;
   }
-    
-  printf("Creating inode successfully.");
-  return inode;
+  else { 
+    printf("Creating inode successful.\n");
+    return inode;
+  }
 }
 
 int parentHasChild(mfs_DIR* parent, mfs_DIR* child) {
@@ -285,8 +286,16 @@ char* getParentPath(char* buf ,const char* path){
 }
 
 //checks if the path is valid
-int checkValidityOfPath(){
+int checkValidityOfPath(char* buf){
   printf("Checking the validity of Path......\n");
+  if(buf == NULL){
+    printf("The validity of the Path is valid. \n");
+    return 1;
+  }
+  else {
+    printf("The validity of the Path is invalid. \n");
+    return 0;
+  }
   // Returns 0 if the path is invalid, and 1 for valid.
 }
 
@@ -383,7 +392,7 @@ int mfs_mkdir(const char *pathname, mode_t mode) {
   }
   
 
-  if( createInode(I_DIR, pathname)){
+  if(createInode(I_DIR, pathname)){
     writeInodes();
     return 0;
   }
@@ -412,9 +421,11 @@ mfs_DIR* mfs_opendir(const char *fileName) {
   printf("mfs open dir\n");
   int ret = b_open(fileName, 0);
   if(ret < 0) {
-    return NULL;
+    //return NULL;
+    return getInode(fileName);
   }
-  return getInode(fileName);
+  return NULL;
+  //return getInode(fileName);
 }
 
 int readdirCounter = 0;
