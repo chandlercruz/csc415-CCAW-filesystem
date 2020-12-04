@@ -1,12 +1,12 @@
 /**************************************************************
-* Class: CSC-415
-* Name: 
-* Student ID: 
+* Class:  CSC-415
+* Name: Team CCAW - Aaron Colmenares, Chandler Cruz, Wesley Xu, Chaoyi Ying
+* Student ID: 916913613 (Aaron), 917048657 (Chandler), 916260714 (Wesley), 918810235 (Chaoyi)
 * Project: Basic File System 
 *
 * File: fileExplorer.c
 *
-* Description: Opens the volume and print out the inode
+* Description: Opens file system's volume and prints out inode from the system
 **************************************************************/
 
 #include "fsMakeVol.h"
@@ -14,7 +14,7 @@
 
 char inodeTypenameBuffer[24];
 
-void printInode(mfs_DIR* inode) {
+void printInode(fs_DIR* inode) {
   printf("Printing Inode......\n");
   printf("id: %ld\n", inode->id);
   printf("type: %s\n", getInodeTypeName(inodeTypenameBuffer, inode->type));
@@ -22,7 +22,7 @@ void printInode(mfs_DIR* inode) {
   printf("path: %s\n", inode->path);
   printf("parent: %s\n", inode->parent);
   
-  /* Print children. */
+  //print inode children
   printf("children: ");
   for(int i=0; i < inode->numChildren; i++) {
     printf("%s ", inode->children[i]);
@@ -31,7 +31,7 @@ void printInode(mfs_DIR* inode) {
 
   printf("numChildren: %d\n", inode->numChildren);
 
-  /* Print block pointers. */
+  //print inode block pointers
   printf("directBlockPointers: ");
   for(int i=0; i < inode->numDirectBlockPointers; i++) {
     printf("%d ", inode->directBlockPointers[i]);
@@ -59,14 +59,14 @@ int main(int argc, char* argv[]) {
 
   openVolume(volumeName);
 
-  mfs_init();
+  fs_init();
 
-  for(int i=0; i<getVCB()->totalInodes; i++) {
-    mfs_DIR* inode = getInodeByID(i);
+  for(int i=0; i<getVCB()->inodes; i++) {
+    fs_DIR* inode = getInodeByID(i);
     printInode(inode);
   }
 
-  mfs_close();
+  fs_close();
 
   closeVolume();
 
