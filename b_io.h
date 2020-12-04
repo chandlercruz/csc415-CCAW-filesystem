@@ -1,7 +1,7 @@
 /**************************************************************
 * Class:  CSC-415-0# 
-* Name:
-* Student ID:
+* Name: Team CCAW - Aaron Colmenares, Chandler Cruz, Wesley Xu, Chaoyi Ying
+* Student ID: 916913613 917048657 916260714 918810235
 * Project: File System Project
 *
 * File: b_io.h
