@@ -147,7 +147,7 @@ dispatch_t dispatchTable[] = {
 static int dispatchcount = sizeof (dispatchTable) / sizeof (dispatch_t);
 
 // Display files for use by ls command
-int displayFiles (mfs_DIR * dirp, int flall, int fllong)
+int displayFiles (fs_DIR * dirp, int flall, int fllong)
 	{
 	if (dirp == NULL)	//get out if error
 		return (-1);
