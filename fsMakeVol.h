@@ -1,7 +1,7 @@
 /**************************************************************
 * Class:  CSC-415
-* Name: 
-* Student ID: 
+* Name: Team CCAW - Aaron Colmenares, Chandler Cruz, Wesley Xu, Chaoyi Ying
+* Student ID: 916913613 917048657 916260714 918810235
 * Project: Basic File System 
 *
 * File: fsMakeVol.h
@@ -44,14 +44,14 @@ typedef struct {
   uint64_t inodeBlocks;
   uint64_t freeMapSize;
   uint32_t freeMap[];
-} mfs_VCB;
+} fs_VCB;
 #endif
 
 //Utility function for rounding up integer division.
 uint64_t ceilDiv(uint64_t, uint64_t);
 
-//Allocates space for an mfs_VCB
-int allocateVCB(mfs_VCB**);
+//Allocates space for an fs_VCB
+int allocateVCB(fs_VCB**);
 
 //Read block
 uint64_t readFileSystem(void*, uint64_t, uint64_t);
@@ -74,7 +74,7 @@ uint64_t readVCB();
 //Write the VCB to disk
 uint64_t writeVCB();
 
-mfs_VCB* getVCB();
+fs_VCB* getVCB();
 
 //printing the VCB in hex and ASCII
 void printVCB();
