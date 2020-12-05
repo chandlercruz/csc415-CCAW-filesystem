@@ -1,12 +1,12 @@
 /**************************************************************
-* Class:  CSC-415-02 Summer 2020
+* Class:  CSC-415
 * Name: Aaron Colmenares, Chandler Cruz, Wesley Xu, Chaoyi Ying
-* Student ID: 916913613 (Aaron), 917048657 (Chandler), 916260714 (Wesley), 918810235 (Chaoyi)
-* Project: Basic File System - PentaFS
+* Student ID: 916913613, 917048657, 916260714, 918810235
+* Project: Basic File System
 *
 * File: b_io.h
 *
-* Description: The header file of the buffered I/O module that contains the prototypes of the methods.
+* Description: Header file for the buffered I/O module (b_io.c)
 *
 **************************************************************/
 

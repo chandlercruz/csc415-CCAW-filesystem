@@ -1,12 +1,12 @@
 /**************************************************************
-* Class: CSC-415
+* Class:  CSC-415
 * Name: Aaron Colmenares, Chandler Cruz, Wesley Xu, Chaoyi Ying
-* Student ID: 916913613 (Aaron), 917048657 (Chandler), 916260714 (Wesley), 918810235 (Chaoyi)
-* Project: Basic File System - PentaFS
+* Student ID: 916913613, 917048657, 916260714, 918810235
+* Project: Basic File System
 *
 * File: bitMap.h
 *
-* Description: This file holds the prototypes to methods that change our free-space bit vector.
+* Description: Header file for the bitmap methods (bitMap.c)
 *
 **************************************************************/
 

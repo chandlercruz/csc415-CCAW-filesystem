@@ -1,12 +1,12 @@
 #**************************************************************
 # Class: CSC-415
-# Name: Aaron Colmenares, Chandler Cruz, Wesley Xu, Chaoyi Ying
-# Student ID: 916913613 (Aaron), 917048657 (Chandler), 916260714 (Wesley), 918810235 (Chaoyi)
-# Project: Basic File System - PentaFS
+# Name: Team CCAW - Aaron Colmenares, Chandler Cruz, Wesley Xu, Chaoyi Ying
+# Student ID: 916913613 917048657 916260714 918810235
+# Project: Basic File System
 #
 # File: Makefile
 #
-# Description: contain comands that run Penta File System
+# Description: contain comands that run file system
 #
 #**************************************************************/
 
@@ -45,12 +45,10 @@ explore:
 	./fileExplorer $(VOLUMENAME)
 
 format:
+	rm $(VOLUMENAME)
 	make fsFormat
 	./fsFormat $(VOLUMENAME) $(VOLUMESIZE) $(BLOCKSIZE)
 
 run:
 	make fsshell
 	./fsshell $(VOLUMENAME)
-
-wipe:
-	rm $(VOLUMENAME)
