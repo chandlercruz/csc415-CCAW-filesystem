@@ -26,6 +26,9 @@ ADDOBJ= fsLow.o b_io.o bitMap.o mfs.o fsMakeVol.o
 all:
 	make fsshell
 	make fsFormat
+	rm $(VOLUMENAME)
+	make fsFormat
+	./fsFormat $(VOLUMENAME) $(VOLUMESIZE) $(BLOCKSIZE)
 	make fileExplorer
 
 fsshell: fsshell.o $(ADDOBJ)
@@ -39,15 +42,6 @@ fileExplorer: fileExplorer.o $(ADDOBJ)
 
 clean:
 	rm *.o fsshell fileExplorer fsFormat
-
-explore:
-	make fileExplorer
-	./fileExplorer $(VOLUMENAME)
-
-format:
-	rm $(VOLUMENAME)
-	make fsFormat
-	./fsFormat $(VOLUMENAME) $(VOLUMESIZE) $(BLOCKSIZE)
 
 run:
 	make fsshell

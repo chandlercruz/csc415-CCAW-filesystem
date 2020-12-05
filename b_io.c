@@ -76,9 +76,6 @@ int b_open (char * filename, int flags)
 	{
 	int fd;
 	int returnFd;
-	
-	printf("b_open\n");
-
 	if (startup == 0) b_init();  
 	returnFd = b_getFCB();	//gets file descriptor
 	
@@ -117,7 +114,6 @@ int b_open (char * filename, int flags)
 		}	
 	fcb->buflen = 0; 
 	fcb->index = 0;	
-	printf("Opened file '%s' with fd %d\n", filename, fd);
 	return (returnFd);
 	}
 
