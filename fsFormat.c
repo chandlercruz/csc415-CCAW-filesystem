@@ -1,8 +1,8 @@
 /**************************************************************
 * Class: CSC-415
-* Name: Team CCAW - Aaron Colmenares, Chandler Cruz, Wesley Xu, Chaoyi Ying
-* Student ID: 916913613 917048657 916260714 918810235
-* Project: Basic File System 
+* Name: Aaron Colmenares, Chandler Cruz, Wesley Xu, Chaoyi Ying
+* Student ID: 916913613 (Aaron), 917048657 (Chandler), 916260714 (Wesley), 918810235 (Chaoyi)
+* Project: Basic File System - PentaFS
 *
 * File: fsFormat.c
 *
@@ -15,7 +15,7 @@
 int main (int argc, char* argv[]) {
 
   if(argc<4) {
-    printf("Missing arguments!\n");
+    printf("Missing arguments. Try fsFormat volumeName volumeSize blockSize\n");
     return 0;
   }
 

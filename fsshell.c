@@ -1,10 +1,10 @@
 /**************************************************************
 * Class:  CSC-415
-* Name: Team CCAW - Aaron Colmenares, Chandler Cruz, Wesley Xu, Chaoyi Ying
+* Name: Aaron Colmenares, Chandler Cruz, Wesley Xu, Chaoyi Ying
 * Student ID: 916913613 (Aaron), 917048657 (Chandler), 916260714 (Wesley), 918810235 (Chaoyi)
-* Project: Basic File System 
+* Project: Basic File System - PentaFS
 *
-* File: fsshell.c
+* File: fsShell.c
 *
 * Description: Main driver for file system assignment.
 *
@@ -178,9 +178,9 @@ int displayFiles (fs_DIR * dirp, int flall, int fllong)
 	}
 	
 
-/****************************************************
-*  ls commmand
-****************************************************/
+//
+// ls command
+//
 int cmd_ls (int argcnt, char *argvec[])
 	{
 #if (CMDLS_ON == 1)				
@@ -192,8 +192,6 @@ int cmd_ls (int argcnt, char *argvec[])
 		
 	static struct option long_options[] = 
 		{
-			/* These options set their assigned flags to value and return 0 */
-			/* These options don't set flags and return the value */	 
 			{"long",	no_argument, 0, 'l'},  
 			{"all",		no_argument, 0, 'a'},
 			{"help",	no_argument, 0, 'h'},
@@ -202,15 +200,9 @@ int cmd_ls (int argcnt, char *argvec[])
 		
 	option_index = 0;
 #ifdef __GNU_LIBRARY__
-    // WORKAROUND
-    // Setting "optind" to 0 triggers initialization of getopt private
-    // structure (holds pointers on data between calls). This helps
-    // to avoid possible memory violation, because data passed to getopt_long()
-    // could be freed between parse() calls.
+
     optind = 0;
 #else
-    // "optind" is used between getopt() calls to get next argument for parsing and should be
-    // initialized before each parsing loop.
     optind = 1;
 #endif
 	fllong = 0;
@@ -225,7 +217,7 @@ int cmd_ls (int argcnt, char *argvec[])
 		   break;
 
 		switch (c) {
-			case 0:			//flag was set, ignore
+			case 0:			//Disregard since flag was set
 			   printf("Unknown option %s", long_options[option_index].name);
 			   if (optarg)
 				   printf(" with arg %s", optarg);
@@ -251,7 +243,7 @@ int cmd_ls (int argcnt, char *argvec[])
 	
 	if (optind < argcnt)
 		{
-		//processing arguments after options
+		//Look at arguments
 		for (int k = optind; k < argcnt; k++)
 			{
 			if (fs_isDir(argvec[k]))
@@ -260,11 +252,10 @@ int cmd_ls (int argcnt, char *argvec[])
 				dirp = fs_opendir (argvec[k]);
 				displayFiles (dirp, flall, fllong);
 				}
-			else // it is just a file ?
+			else //Check if file
 				{
 				if (fs_isFile (argvec[k]))
 					{
-					//no support for long format here
 					printf ("%s\n", argvec[k]);
 					}
 				else
@@ -274,9 +265,9 @@ int cmd_ls (int argcnt, char *argvec[])
 				}
 			}		
 		}
-	else   // no pathname/filename specified - use cwd
+	else   //No pathname/filename specified - use cwd
 		{
-		char * path = fs_getcwd(cwd, DIRMAX_LEN);	//get current working directory
+		char * path = fs_getcwd(cwd, DIRMAX_LEN);	//Get current path
 		fs_DIR * dirp;
 		dirp = fs_opendir (path);
 		return (displayFiles (dirp, flall, fllong));
@@ -286,9 +277,9 @@ int cmd_ls (int argcnt, char *argvec[])
 	}
 
 	
-/****************************************************
-*  Copy file commmand
-****************************************************/
+//
+//Copy Command
+//
 	
 int cmd_cp (int argcnt, char *argvec[])
 	{
@@ -302,7 +293,7 @@ int cmd_cp (int argcnt, char *argvec[])
 	
 	switch (argcnt)
 		{
-		case 2:	//only one name provided
+		case 2:	//one argument
 			src = argvec[1];
 			dest = src;
 			break;
@@ -331,21 +322,23 @@ int cmd_cp (int argcnt, char *argvec[])
 #endif
 	}
 	
-/****************************************************
-*  Move file commmand
-****************************************************/
+//
+//Move Command
+//
 int cmd_mv (int argcnt, char *argvec[])
 	{
 #if (CMDMV_ON == 1)				
-	return -99;
-	// **** TODO ****  For you to implement	
+	cmd_cp(argcnt, argvec);
+	char *hack[2];
+	hack[0] = argvec[0];
+	hack[1] = argvec[1];
+	cmd_rm(2, hack);
 #endif
 	}
 
-/****************************************************
-*  Make Directory commmand
-****************************************************/
-// Make Directory	
+//
+// Make Directory Command
+//
 int cmd_md (int argcnt, char *argvec[])
 	{
 #if (CMDMD_ON == 1)				
@@ -361,9 +354,9 @@ int cmd_md (int argcnt, char *argvec[])
 #endif
 	}
 	
-/****************************************************
-*  Remove directory or file commmand
-****************************************************/
+//
+//Remove Command
+//
 int cmd_rm (int argcnt, char *argvec[])
 	{
 #if (CMDRM_ON == 1)
@@ -374,8 +367,6 @@ int cmd_rm (int argcnt, char *argvec[])
 		}
 		
 	char * path = argvec[1];	
-	
-	//must determine if file or directory
 	if (fs_isDir (path))
 		{
 		return (fs_rmdir (path));
@@ -390,9 +381,9 @@ int cmd_rm (int argcnt, char *argvec[])
 #endif
 	}
 	
-/****************************************************
-*  Copy file from test file system to Linux commmand
-****************************************************/
+//
+//Copy from file system to linux command
+//
 int cmd_cp2l (int argcnt, char *argvec[])
 	{
 #if (CMDCP2L_ON == 1)				
@@ -405,7 +396,7 @@ int cmd_cp2l (int argcnt, char *argvec[])
 	
 	switch (argcnt)
 		{
-		case 2:	//only one name provided
+		case 2:	//One argument
 			src = argvec[1];
 			dest = src;
 			break;
@@ -434,9 +425,9 @@ int cmd_cp2l (int argcnt, char *argvec[])
 #endif
 	}
 	
-/****************************************************
-*  Copy file from Linux to test file system commmand
-****************************************************/
+//
+//Copy file from linux to file system commmand
+//
 int cmd_cp2fs (int argcnt, char *argvec[])
 	{
 #if (CMDCP2FS_ON == 1)				
@@ -449,7 +440,7 @@ int cmd_cp2fs (int argcnt, char *argvec[])
 	
 	switch (argcnt)
 		{
-		case 2:	//only one name provided
+		case 2:	//One argument
 			src = argvec[1];
 			dest = src;
 			break;
@@ -479,9 +470,9 @@ int cmd_cp2fs (int argcnt, char *argvec[])
 #endif
 	}
 	
-/****************************************************
-*  cd commmand
-****************************************************/
+//
+//Cd command
+//
 int cmd_cd (int argcnt, char *argvec[])
 	{
 #if (CMDCD_ON == 1)	
@@ -490,19 +481,19 @@ int cmd_cd (int argcnt, char *argvec[])
 		printf ("Usage: cd path\n");
 		return (-1);
 		}
-	char * path = argvec[1];	//argument
+	char * path = argvec[1];
 	
 	if (path[0] == '"')
 		{
 		if (path[strlen(path)-1] == '"')
 			{
-			//remove quotes from string
 			path = path + 1;
 			path[strlen(path) - 1] = 0;
 			}
 		}
 	int ret = fs_setcwd (path);
-	if (ret != 0)	//error
+	//error
+	if (ret != 0)
 		{
 		printf ("Could not change path to %s\n", path);
 		return (ret);
@@ -511,16 +502,17 @@ int cmd_cd (int argcnt, char *argvec[])
 #endif
 	}
 	
-/****************************************************
-*  PWD commmand
-****************************************************/
+//
+//Pwd commmand
+//
 int cmd_pwd (int argcnt, char *argvec[])
 	{
 #if (CMDPWD_ON == 1)
 	char * dir_buf = malloc (DIRMAX_LEN +1);
 	char * ptr;	
-	ptr = fs_getcwd (dir_buf, DIRMAX_LEN);	
-	if (ptr == NULL)			//an error occurred
+	ptr = fs_getcwd (dir_buf, DIRMAX_LEN);
+	//an error occurred
+	if (ptr == NULL)			
 		{
 		printf ("An error occurred while trying to get the current working directory\n");
 		}
@@ -536,9 +528,9 @@ int cmd_pwd (int argcnt, char *argvec[])
 #endif
 	}
 
-/****************************************************
-*  History commmand
-****************************************************/
+//
+//History command
+//
 int cmd_history (int argcnt, char *argvec[])
 	{
 	HIST_ENTRY * he;
@@ -557,9 +549,9 @@ int cmd_history (int argcnt, char *argvec[])
 	return 0;
 	}
 	
-/****************************************************
-*  Help commmand
-****************************************************/
+//
+//Help command
+//
 int cmd_help (int argcnt, char *argvec[])
 	{
 	for (int i = 0; i < dispatchcount; i++)
@@ -658,7 +650,7 @@ void processcommand (char * cmd)
 		printf("%s: length %d\n", cmdv[i], strlen(cmdv[i]));
 		}
 #endif		
-	cmdv[cmdc] = 0;		//just be safe - null terminate array of arguments
+	cmdv[cmdc] = 0;
 	
 	for (i = 0; i < dispatchcount; i++)
 		{
@@ -714,7 +706,6 @@ int main (int argc, char * argv[])
 			{
 			free (cmd);
 			cmd = NULL;
-			// exit while loop and terminate shell
 			break;
 			}
 			
@@ -730,7 +721,7 @@ int main (int argc, char * argv[])
 				
 		free (cmd);
 		cmd = NULL;		
-		} // end while
+		}
 
 		closeFileSystem();
 

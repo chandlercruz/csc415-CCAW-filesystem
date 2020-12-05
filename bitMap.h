@@ -1,8 +1,8 @@
 /**************************************************************
 * Class: CSC-415
-* Name: Team CCAW - Aaron Colmenares, Chandler Cruz, Wesley Xu, Chaoyi Ying
-* Student ID: 916913613 917048657 916260714 918810235
-* Project: Basic File System 
+* Name: Aaron Colmenares, Chandler Cruz, Wesley Xu, Chaoyi Ying
+* Student ID: 916913613 (Aaron), 917048657 (Chandler), 916260714 (Wesley), 918810235 (Chaoyi)
+* Project: Basic File System - PentaFS
 *
 * File: bitMap.h
 *
@@ -10,6 +10,6 @@
 *
 **************************************************************/
 
-void setBitmap(int A[], int k);
-void clearBitmap(int A[], int k);
-int findBitmap(int A[], int k);
+void setBitMap(int A[], int k);
+void clearBitMap(int A[], int k);
+int findBitMap(int A[], int k);

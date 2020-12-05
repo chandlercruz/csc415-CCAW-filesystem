@@ -1,12 +1,13 @@
 /**************************************************************
 * Class:  CSC-415-02 Summer 2020
-* Name: Team CCAW - Aaron Colmenares, Chandler Cruz, Wesley Xu, Chaoyi Ying
-* Student ID: 916913613 917048657 916260714 918810235
-* Project: Basic File System 
+* Name: Aaron Colmenares, Chandler Cruz, Wesley Xu, Chaoyi Ying
+* Student ID: 916913613 (Aaron), 917048657 (Chandler), 916260714 (Wesley), 918810235 (Chaoyi)
+* Project: Basic File System - PentaFS
 *
 * File: mfs.c
 *
-* Description: This file defines the methods to initialize, keep track of, and change our file system's inodes.
+* Description: This is the file system's method definitions.
+*	These methods initialize, change and hold information pertaining to files and folders in our file system.
 *
 **************************************************************/
 
@@ -14,37 +15,37 @@
 
 fs_DIR* inodes;
 
-//set number of inodes in array
-size_t numberOfElement = sizeof(inodes)/sizeof(inodes[0]);
+//Get the number of elemnts in inodes array
+size_t NumberOfElementsInInodesArray = sizeof(inodes)/sizeof(inodes[0]);
 
 void fs_init() {
-  printf("Initializing\n");
+  printf("----------------------------fs_init----------------------------\n");
 
-  uint64_t totalBytes = getVCB()->inodeBlocks * getVCB()->blockSize;
-  printf("Total Inode Blocks is %ld, blockSize is %ld\n", getVCB()->inodeBlocks, getVCB()->blockSize);
-  printf("Allocating %ld bytes.\n", totalBytes);
+  uint64_t totalBytes = getVCB()->totalInodeBlocks * getVCB()->blockSize;
+  printf("totalInodeBlocks %ld, blockSize %ld\n", getVCB()->totalInodeBlocks, getVCB()->blockSize);
+  printf("Allocating %ld bytes for inodes.\n", totalBytes);
 
-  inodes = calloc(getVCB()->inodeBlocks, getVCB()->blockSize);
+  inodes = calloc(getVCB()->totalInodeBlocks, getVCB()->blockSize);
   printf("Inodes allocated at %p.\n", inodes);
 
-  uint64_t blocksRead = LBAread(inodes, getVCB()->inodeBlocks, getVCB()->inodeBlock);
-  printf("Loaded %ld blocks into cache.\n", blocksRead);
+  uint64_t blocksRead = LBAread(inodes, getVCB()->totalInodeBlocks, getVCB()->inodeStartBlock);
+  printf("Loaded %ld blocks of inodes into cache.\n", blocksRead);
   
-  if(blocksRead != getVCB()->inodeBlocks) {
-    printf("exist inodes do not loaded into cache.\n");
+  if(blocksRead != getVCB()->totalInodeBlocks) {
+    printf("Error: Not all inodes loaded into cache.\n");
     fs_close();
     exit(0);
   }
 
   fs_setcwd("/root");
 
-  printf(" ");
+  printf("----------------------------------------------------------------\n");
 }
 
 void writeInodes() {
-  printf("Writing Inode......");
-  LBAwrite(inodes, getVCB()->inodeBlocks, getVCB()->inodeBlock);
-  printf(" ");
+  printf("--------------------------writeInodes---------------------------\n");
+  LBAwrite(inodes, getVCB()->totalInodeBlocks, getVCB()->inodeStartBlock);
+  printf("----------------------------------------------------------------\n");
 }
 
 char inodeTypeNames[3][64] = { "I_FILE", "I_DIR", "I_UNUSED" };
@@ -54,37 +55,38 @@ char* getInodeTypeName(char* buf, InodeType type) {
   return buf;
 }
 
-//holds the current directory path
+//Holds current directory path
 char currentDirectoryPath[MAX_FILEPATH_SIZE];
 char currentDirectoryPathArray[MAX_DIRECTORY_DEPTH][MAX_FILENAME_SIZE];
 int currentDirectoryPathArraySize = 0;
 
-//holds each part of path
+//Hold each part of the path
 char requestedFilePath[MAX_FILEPATH_SIZE];
 char requestedFilePathArray[MAX_DIRECTORY_DEPTH][MAX_FILENAME_SIZE];
 int requestedFilePathArraySize = 0;
 
 void parseFilePath(const char *pathname) { 
-  printf("Parsing the File Path........\n");
+  printf("------------------------Parsing File Path-----------------------\n");
   
   printf("Input: %s\n", pathname);
 
-  //Clear the value and count
+  //Clear previous values
   requestedFilePath[0] = '\0';
   requestedFilePathArraySize = 0;
 
-  //copying the pathname.
+  //Make mutable copy of pathname
   char _pathname[MAX_FILEPATH_SIZE];
   strcpy(_pathname, pathname);
 
-  //Delimeter for the path
+  //Create delimeter for path
   char* savePointer;
   char* token = strtok_r(_pathname, "/", &savePointer);
 
-  //Sorting path
+  //Specify the path
   int isAbsolute = pathname[0] == '/';
   int isSelfRelative = !strcmp(token, ".");
   int isParentRelative = !strcmp(token, "..");
+
 
   if(token && !isAbsolute) {
     int maxLevel = isParentRelative ? currentDirectoryPathArraySize - 1 : currentDirectoryPathArraySize;
@@ -95,136 +97,166 @@ void parseFilePath(const char *pathname) {
     }
   }
 
-  //Drop hidden files
+  //Get rid of invisible files
   if(isSelfRelative || isParentRelative) {
     token = strtok_r(0, "/", &savePointer);
   }
 
   while(token && requestedFilePathArraySize < MAX_DIRECTORY_DEPTH) {
+
     strcpy(requestedFilePathArray[requestedFilePathArraySize], token);
     sprintf(requestedFilePath, "%s/%s", requestedFilePath, token);
+
+    //Debug message
     printf("\t%s\n", token);
+    
     requestedFilePathArraySize++;
     token = strtok_r(0, "/", &savePointer);
+
   }
 
   printf("Output: %s\n", requestedFilePath);
-  printf(" ");
+
+printf("----------------------------------------------------------------\n");
+
 }
 
 //Added to test parseFileName
 void printFilePath() {
+
   for(int i=0; i<requestedFilePathArraySize; i++) {
+
     if(i<requestedFilePathArraySize-1) {
-      printf("Directory %d is %s\n", i, requestedFilePathArray[i]);
+      printf("Directory %d: %s\n", i, requestedFilePathArray[i]);
     } else {
-      printf("Filename is %s\n", requestedFilePathArray[i]);
+      printf("Filename: %s\n", requestedFilePathArray[i]);
     }
 
   }
 }
 
 fs_DIR* getInode(const char *pathname){
-  printf("Getting Inode......");
-  //Try to find node and return it, null if not found
-  printf("Searching path: '%s'\n", pathname);
-  for (size_t i = 0; i < getVCB()->inodes; i++) {
+  printf("----------------------------getInode----------------------------\n");
+  // Loop over inodes, find requested node, return that node, if does not exist return NULL
+
+  printf("Searching for path: '%s'\n", pathname);
+  for (size_t i = 0; i < getVCB()->totalInodes; i++) {
     printf("\tInode path: '%s'\n", inodes[i].path);
     if (strcmp(inodes[i].path, pathname) == 0) {
-      printf(" ");
+      printf("----------------------------------------------------------------\n");
       return &inodes[i];
     }
   }
-  printf("Inode path '%s' does not exist.\n", pathname);
-  printf(" ");
+
+  printf("Inode with path '%s' does not exist.\n", pathname);
+
+  printf("----------------------------------------------------------------\n");
 
   return NULL;
 
 }
 
 fs_DIR* getFreeInode(){
-  printf("Get Free Inode......\n");
-  //Return first free node,
-  //Update inUse of the returned node to 1 (Which means it's in use right now)
-  //if none return NULL
+  printf("--------------------------getFreeInode--------------------------\n");
+  // Search through inodes, return the first avalable inode,
+  // Update inUse of the returned node to 1 (Which means it's in use right now)
+  // if there is no free inode return NULL
   fs_DIR* returnediNode;
 
-  for (size_t i = 0; i < getVCB()->inodes; i++) {
-    if (inodes[i].inUse == 0) { //check the status of node
-      inodes[i].inUse = 1; //change status to be used
+  for (size_t i = 0; i < getVCB()->totalInodes; i++) {
+    if (inodes[i].inUse == 0) { // if the inode inUse equals 0, that means it is free so we return it
+      inodes[i].inUse = 1; // update the node to be in use before returning it
       returnediNode = &inodes[i];
-      printf(" ");
+      
+      printf("----------------------------------------------------------------\n");
+      
       return returnediNode;
+      
     }
   }
-  printf(" ");
+
+  printf("----------------------------------------------------------------\n");
+
   return NULL;
 }
 
 fs_DIR* createInode(InodeType type, const char* path){
-  printf("Creating Inode......\n");
+  printf("--------------------------createInode---------------------------\n");
+
+  // returns an inode if it succeeds and NULL if it could not create the inode
   fs_DIR* inode;
   char parentPath[MAX_FILEPATH_SIZE];
   fs_DIR* parentNode;
 
-  //Get time
+  //Obtain current time. */
   time_t currentTime;
   currentTime = time(NULL);
 
-  if (checkValidityOfPath() == 0){
+  // call checkPath() if fales return NULL
+  if (checkPath() == 0){
+    printf("----------------------------------------------------------------\n");
     return NULL;
   }
 
+  // call getFreeInode() to recieve the next available inode
   inode = getFreeInode();
 
-  //Set parent to the node gotten previously
+  //find and assign the parent to the new inode
   getParentPath(parentPath, path);
   parentNode = getInode(parentPath);
   
-  //Set the status of the node
+  //Set properties on inode. */
   inode->type = type;
   strcpy(inode->name , requestedFilePathArray[requestedFilePathArraySize - 1]);
   sprintf(inode->path, "%s/%s", parentPath, inode->name);
   inode->lastAccessTime = currentTime;
   inode->lastModificationTime = currentTime;
 
-  //Links the child to parent
+  //Try to set the parent. If it fails, revert. */
   if (!setParent(parentNode, inode)) {
     freeInode(inode);
-    printf("Error, reverting changes.\n");
+    printf("Error setting parent. Reverting changes.\n");
+    printf("----------------------------------------------------------------\n");
     return NULL;
   }
     
-  printf("Creating inode successfully.");
+  printf("Sucessfully created inode for path '%s'.\n", path);       
+  printf("----------------------------------------------------------------\n");
   return inode;
+
 }
 
 int parentHasChild(fs_DIR* parent, fs_DIR* child) {
+
+  //Loop through children. Return 1 on the first name match. */
   for( int i = 0; i < parent->numChildren; i++ ) {
     if(!strcmp(parent->children[i], child->name)) {
       return 1;
     }
   }
+
   return 0;
 }
 
-//Set the parent and child inodes to each other
+//set the given parent and child inodes to each other if they exist
+//returns 0 if it can't, and 1 on success
 int setParent(fs_DIR* parent, fs_DIR* child){
-  printf("Set Parent......\n");
-  //Checks to see if parent can have more children
+  printf("----------------------------setParent---------------------------\n");
+  
+  //checking if the parent can take anymore children in our file system
   if(parent->numChildren == MAX_NUMBER_OF_CHILDREN) {
-    printf("Folder '%s' had maximum children.\n", parent->path);
-    printf(" ");
+    printf("Folder '%s' has maximum children.\n", parent->path);
+    printf("----------------------------------------------------------------\n");
     return 0;
   }
 
-  //Checking if a child already exists
+  //checking if a child like the one passed, already exists
   if(parentHasChild(parent, child)) {
-    printf("Folder '%s' was already exists.\n", child->path);
+    printf("Folder '%s' already exists.\n", child->path);
     return 0;
   }
 
-  //Set parent to all children
+  //set the rest of the properties of the parent and child to correspond with each other
   strcpy(parent->children[parent->numChildren], child->name);
   parent->numChildren++;
   parent->lastAccessTime = time(0);
@@ -237,17 +269,19 @@ int setParent(fs_DIR* parent, fs_DIR* child){
 
   printf("Set parent of '%s' to '%s'.\n", child->path, child->parent);
   
-  printf(" ");
+  printf("----------------------------------------------------------------\n");
   return 1;
 }
 
 int removeFromParent(fs_DIR* parent, fs_DIR* child) {
-  printf("Remove Parent......\n");
+  printf("-----------------------removeFromParent-------------------------\n");
   
-  //Loop through parents list
+  //Loop through parent's list of children until name match. */
   for(int i=0; i<parent->numChildren; i++) {
+    
     if(!strcmp(parent->children[i], child->name)) {
-      //Clear entry in children parents list
+
+      //Clear entry in parent's list of children. Decrement child count. */
       strcpy(parent->children[i], "");
       parent->numChildren--;
       parent->sizeInBlocks -= child->sizeInBlocks;
@@ -257,62 +291,82 @@ int removeFromParent(fs_DIR* parent, fs_DIR* child) {
   }
 
   printf("Could not find child '%s' in parent '%s'.\n", child->name, parent->path);
+  printf("----------------------------------------------------------------\n");
   return 0;
 
 }
 
+//method will return NULL if the parent's path cannot be found, otherwise sets the passed buffer to the path and returns it
 char* getParentPath(char* buf ,const char* path){
-  printf("Getting Parent Path......\n");
+  printf("-------------------------getParentPath--------------------------\n");
 
-  //Find the parent path
+  //Parses the requestedFilePathArray into a string to find the parent string "path"
+  //Copy parent path to buf, return buf
+  
+  //Parse the path. */
   parseFilePath(path);
 
   char parentPath[MAX_FILEPATH_SIZE] = "";
 
-  //Loops to second to last element
+  //Loop until the second to last element. */
   for(int i=0; i<requestedFilePathArraySize - 1; i++) {
+
+    //Append a separator and the next level of the path. */
     strcat(parentPath, "/");
     strcat(parentPath, requestedFilePathArray[i]);
   }
 
   strcpy(buf, parentPath);
+
   printf("Input: %s, Parent Path: %s\n", path, buf);
+  
+  printf("----------------------------------------------------------------\n");
+  
   return buf;
 }
 
-//Checks if valid path
-int checkValidityOfPath(){
-  printf("Checking the validity of Path......\n");
-  //Returns 0 if the path is invalid, and 1 for valid.
+//checks if a the path is valid
+int checkPath(){
+  printf("----------------------checkPath-----------------------\n");
+  // Returns 0 if the path is invalid, and 1 if it is valid
+  // It would loop over requestedFilePathArray and assemble each partial path by adding next level
+  // Search for partial path with getInode and fails when it cannot found
+  printf("----------------------------------------------------------------\n");
 }
 
 fs_DIR* getInodeByID(int id) {
-  if(0 <= id < getVCB()->inodes) {
+  if(0 <= id < getVCB()->totalInodes) {
     return &inodes[id];
   } else {
     return NULL;
   }
 }
 
-int writeBufferToInode(fs_DIR* inode, char* buffer, size_t bufSizeBytes, uint64_t blockNumber) {
-  printf("Writing buffer to inode......\n");
+int writeBufInode(fs_DIR* inode, char* buffer, size_t bufSizeBytes, uint64_t blockNumber) {
+  printf("-----------------------writeBufInode-----------------------\n");
+
+  //Check if dataBlockPointers is full. */
   int freeIndex = -1;
   for(int i=0; i<MAX_DATABLOCK_POINTERS; i++) {
     if(inode->directBlockPointers[i] == INVALID_DATABLOCK_POINTER) {
+      
+      //Record free dataBlockPointer index. */
       freeIndex = i;
       break;
     }
   }
-  //If there is no place to put the new dataBlock pointer
+
+  //If there is no place to put the new dataBlock pointer. Return 0 blocks/bytes written. */
   if(freeIndex == -1) {
     return 0;
   }
-  //Write buffered data to disk
+
+  //Write buffered data to disk, update inode, write inodes to disk. */
   LBAwrite(buffer, 1, blockNumber);
 
-  //Record the block number in the node
+  //Record the block number in the inode, reserve the block in the freeMap and write the VCB. */
   inode->directBlockPointers[freeIndex] = blockNumber;
-  setBitmap(getVCB()->freeMap, blockNumber);
+  setBitMap(getVCB()->freeMap, blockNumber);
   writeVCB();
 
   inode->numDirectBlockPointers++;
@@ -322,11 +376,18 @@ int writeBufferToInode(fs_DIR* inode, char* buffer, size_t bufSizeBytes, uint64_
   inode->lastModificationTime = time(0);
 
   writeInodes();
+
+  printf("----------------------------------------------------------------\n");
+
   return 1;
+
 }
 
 void freeInode(fs_DIR* node){
+  printf("----------------------------freeInode---------------------------\n");
+  
   printf("Freeing inode: '%s'\n", node->path);
+  
   node->inUse = 0;
   node->type = I_UNUSED;
   node->name[0] = NULL;
@@ -337,25 +398,31 @@ void freeInode(fs_DIR* node){
   node->lastAccessTime = 0;
   node->lastModificationTime = 0;
 
-  //free data blocks
+  //free the data blockes asociated with the file, if we are deleting a file */
   if(node->type == I_FILE){
     for (size_t i = 0; i < node->numDirectBlockPointers; i++) {
       int blockPointer = node->directBlockPointers[i];
-      clearBitmap(getVCB()->freeMap, blockPointer);
+      clearBitMap(getVCB()->freeMap, blockPointer);
     }
   }
+  printf("----------------------------------------------------------------\n");
+
+  //Commit changes to disk. */
   writeInodes();
 
 }
 
 void fs_close() {
-  printf("fs close\n");
+  printf("----------------------------fs_close---------------------------\n");
   free(inodes);
+  printf("----------------------------------------------------------------\n");
 }
  
 
-int fs_mkdir(const char *pathname, mode_t mode) {
-  printf("fs make dir\n");
+int fs_mkdir(const char *pathname, mode_t mode) { // return 0 for sucsess and -1 if not
+  printf("----------------------------fs_mkdir---------------------------\n");
+  // Parses file name, adds info for inode fs_DIR
+  // Adds info to parent if necessary and checks if the folder already exists
   char parentPath[256] = "";
   parseFilePath(pathname);
 
@@ -369,26 +436,30 @@ int fs_mkdir(const char *pathname, mode_t mode) {
     for (size_t i = 0; i < parent->numChildren; i++){
       if(strcmp(parent->children[i], requestedFilePathArray[requestedFilePathArraySize - 1])){
           printf("Folder already exists!\n");
+          printf("----------------------------------------------------------------\n");
           return -1;
       }
     }
   } else {
     printf("Parent '%s' does not exist!\n", parentPath);
+    printf("----------------------------------------------------------------\n");
     return -1;
   }
   
 
   if( createInode(I_DIR, pathname)){
     writeInodes();
+    printf("----------------------------------------------------------------\n");
     return 0;
   }
   printf("Failed to make directory '%s'.\n", pathname);
+  printf("----------------------------------------------------------------\n");
   return -1;
 }
 
 //Upon success, returns a 0 otherwise returns a -1
 int fs_rmdir(const char *pathname) {
-  printf("fs rm dir\n");
+  printf("----------------------------fs_rmdir---------------------------\n");
   fs_DIR* node = getInode(pathname);
   if(!node) {
     printf("%s does not exist.\n", pathname);
@@ -398,17 +469,21 @@ int fs_rmdir(const char *pathname) {
   if (node->type == I_DIR && node->numChildren == 0){
     removeFromParent(parent,node);
     freeInode(node);
+    printf("----------------------------------------------------------------\n");
     return 0;
   }
+  printf("----------------------------------------------------------------\n");
   return -1;
 }
 
 fs_DIR* fs_opendir(const char *fileName) {
-  printf("fs open dir\n");
+  printf("---------------------------fs_opendir--------------------------\n");
   int ret = b_open(fileName, 0);
   if(ret < 0) {
+    printf("----------------------------------------------------------------\n");
     return NULL;
   }
+  printf("----------------------------------------------------------------\n");
   return getInode(fileName);
 }
 
@@ -416,107 +491,116 @@ int readdirCounter = 0;
 struct fs_dirent directoryEntry;
 
 struct fs_dirent* fs_readdir(fs_DIR *dirp) {
-  printf("fs read dir\n");
+  printf("--------------------------fs_readdir---------------------------\n");
   
   if(readdirCounter == dirp->numChildren) {
     readdirCounter = 0;
     return NULL;
   }
   
-  //Get child inode
+  //Get child inode. */
   char childPath[MAX_FILEPATH_SIZE];
   sprintf(childPath, "%s/%s", dirp->path, dirp->children[readdirCounter]);
   fs_DIR* child = getInode(childPath);
+
+  //Set properties on dirent. */
   directoryEntry.d_ino = child->id;
   strcpy(directoryEntry.d_name, child->name);
 
-  //Increment the counter to the next child
+  //Increment the counter to the next child. */
   readdirCounter++;
+
+  printf("----------------------------------------------------------------\n");
   return &directoryEntry;
 }
 
 int fs_closedir(fs_DIR *dirp) {
-  printf("fs close dir\n");
+  printf("-------------------------fs_closedir---------------------------\n");
+  printf("----------------------------------------------------------------\n");
+  // 
   return 0;
 }
 
-//Get the directory passed to function
 char * fs_getcwd(char *buf, size_t size) {
-  printf("fs get cwd\n");
+  printf("---------------------------fs_getcwd---------------------------\n");
   if(strlen(currentDirectoryPath) > size) {
     errno = ERANGE;
+    printf("----------------------------------------------------------------\n");
     return NULL;
   }
   strcpy(buf, currentDirectoryPath);
+  printf("----------------------------------------------------------------\n");
   return buf;
 }
 
-//Set the directory
+//Note: This does not currently check validity of 
+//      the path. This may need to first check whether the provided path is within limit of MAX_FILENAME_SIZE
+//      and set errno similar to fs_getcwd.
+
 int fs_setcwd(char *buf) {
-  printf("fs set cwd\n");
+  printf("---------------------------fs_setcwd---------------------------\n");
   
   parseFilePath(buf);
 
-  //Check if node exists
+  //Check if inode exists. */
   fs_DIR* inode = getInode(requestedFilePath);
   if(!inode) {
     printf("Directory '%s' does not exist.\n", requestedFilePath);
+    printf("----------------------------------------------------------------\n");
     return 1;
   }
 
-  //Clear the directories
+  //Clear previous cwd. */
   currentDirectoryPath[0] = '\0';
   currentDirectoryPathArraySize = 0;
 
-  //Copy pathname to currentDirectoryPathArray.
+  //Copy parsed pathname to currentDirectoryPathArray. */
   for(int i=0; i<requestedFilePathArraySize; i++) {
     strcpy(currentDirectoryPathArray[i], requestedFilePathArray[i]);
     sprintf(currentDirectoryPath, "%s/%s", currentDirectoryPath, requestedFilePathArray[i]);
     currentDirectoryPathArraySize++;
   }
+
   printf("Set cwd to '%s'.\n", currentDirectoryPath);
+
+  printf("----------------------------------------------------------------\n");
   return 0;
 
 }
 
-
-void printCurrentDirectoryPath() {
-  for(int i=0; i<currentDirectoryPathArraySize; i++) {
-    if(i<currentDirectoryPathArraySize-1) {
-      printf("Directory %d: %s\n", i, currentDirectoryPathArray[i]);
-    } else {
-      printf("Filename: %s\n", currentDirectoryPathArray[i]);
-    }
-
-  }
-}
-
-//Initial fs_isFile and fs_isDir
+//Initial implementation of fs_isFile and fs_isDir
 int fs_isFile(char * path) {
-  printf("isFile\n");
+  printf("------------------------------isFile----------------------------\n");
   fs_DIR* inode = getInode(path);
+  printf("----------------------------------------------------------------\n");
   return inode ? inode->type == I_FILE : 0;
 }
 
 int fs_isDir(char * path) {
-  printf("isDir\n");
+  printf("------------------------------isDir-----------------------------\n");
   fs_DIR* inode = getInode(path);
+  printf("----------------------------------------------------------------\n");
   return inode ? inode->type == I_DIR : 0;
 }
 
 int fs_delete(char* filePath) {
-  printf("fs delete\n");
+  printf("---------------------------fs_delete---------------------------\n");
+  //Get inode
   fs_DIR* fileNode = getInode(filePath); 
+  //Get parent
   fs_DIR* parentNode = getInode(fileNode->parent);
   //Remove child from parent
   removeFromParent(parentNode, fileNode);
+  //Clear properties on child inode so it is not found in search & Set inuse to false.
   freeInode(fileNode);
+  
+  printf("----------------------------------------------------------------\n");
   return 0;
 }
 
-//fs_DIR might need to be changed to include these items
+// fs_DIR needs rework to contain these fields.
 int fs_stat(const char *path, struct fs_stat *buf) {
-  printf("fs stat\n");
+  printf("----------------------------fs_stat----------------------------\n");
   fs_DIR* inode = getInode(path);
   if(inode) {
     buf->st_size = 999;
@@ -525,7 +609,9 @@ int fs_stat(const char *path, struct fs_stat *buf) {
     buf->st_accesstime = 1;
     buf->st_modtime = 1;
     buf->st_createtime = 1;
+    printf("----------------------------------------------------------------\n");
     return 1;
   }
+  printf("----------------------------------------------------------------\n");
   return 0;
 }

@@ -1,13 +1,13 @@
 /**************************************************************
-* Class:  CSC-415
+* Class:  CSC-415-02 Summer 2020
 * Name: Aaron Colmenares, Chandler Cruz, Wesley Xu, Chaoyi Ying
 * Student ID: 916913613 (Aaron), 917048657 (Chandler), 916260714 (Wesley), 918810235 (Chaoyi)
-* Project: Basic File System 
+* Project: Basic File System - PentaFS
 *
 * File: b_io.c
 *
-* Description: Buffered I/O - This file has the open, read, write, and close methods for
-* 		our file system's functionality.
+* Description: Buffered I/O module - This has all the methods that will open, read, write and close
+* files to and from our file system.
 *
 **************************************************************/
 
@@ -23,35 +23,37 @@
 
 #define MAXFCBS 20
 
+/* Added this so that it can be set at runtime in b_init from value of getVCB()->blockSize. */
 uint64_t bufSize;
 
 typedef enum  {NoWRITE,WRITE} fileMode;
 
 typedef struct b_fcb {
-	int linuxFd;		//file descriptor
-	char * buf;		//file buffer
-	int index;		//position in the buffer
-	int blockIndex;		//index of the block in the FCB
-	int buflen;		//how many valid bytes are in the buffer
-	fileMode mode;
-	fs_DIR* inode;
+	int linuxFd;	//holds the systems file descriptor
+	char * buf;		//holds the open file buffer
+	int index;		//holds the current position in the buffer
+	int blockIndex;		//holds the index of the block in the FCB
+	int buflen;		//holds how many valid bytes are in the buffer
+	fileMode mode; // sets when file if open for write 
+	fs_DIR* inode; //holdsa pointer to the inode associated with the file 
 	int eof;
 
 	} b_fcb;
 	
-b_fcb fcbArray[MAXFCBS]; //FCB array that holds the files
+b_fcb fcbArray[MAXFCBS]; //the FCB array in charge of holding all the files
 
-int startup = 0;	//has been initialized or not
+int startup = 0;	//Indicates that this has not been initialized
 
-//initializes the file system
+//Method to initialize our file system
 void b_init ()
 {
 
-		bufSize = getVCB()->blockSize; //sets buffer size equal to block size of the file system
+		/* Set buffer size equal to the block size of our file system. */
+		bufSize = getVCB()->blockSize;
 
-	//initialize fcbArray
+	//init fcbArray to being all free
 	for (int i = 0; i < MAXFCBS; i++)
-	{ 
+	{ //both indicating a free fcbArray
 		fcbArray[i].linuxFd = -1;
 		fcbArray[i].mode = NoWRITE;
 	}
@@ -59,22 +61,22 @@ void b_init ()
 	startup = 1;
 }
 
-//retrieves free element/file in the fcbArray
+//Method to get a free element/file in the fcbArray
 int b_getFCB ()
 {
 	for (int i = 0; i < MAXFCBS; i++)
 		{
 			if (fcbArray[i].linuxFd == -1)
 			{
-				fcbArray[i].linuxFd = -2; 
-				return i;		
+				fcbArray[i].linuxFd = -2; // used but not assigned
+				return i;		//Not thread safe
 			}
 		}
-	return (-1); 
+	return (-1);  //all in use
 }
 	
 
-// opens a buffered file
+// Interface to open a buffered file
 // Modification of interface for this assignment, flags match the Linux flags for open
 // O_RDONLY, O_WRONLY, or O_RDWR
 int b_open (char * filename, int flags)
@@ -84,12 +86,14 @@ int b_open (char * filename, int flags)
 	
 	printf("b_open\n");
 
-	if (startup == 0) b_init();
+	if (startup == 0) b_init();  //Initialize our system
 
-	returnFd = b_getFCB();	// gets file descriptor
+	//Should have a mutex here
+	returnFd = b_getFCB();	// get our own file descriptor
 	
 
-	//check if there was available fcb returned
+	/* Check if there was an available fcb returned to us. 
+	 * Return -1 if there was not. */
 	b_fcb* fcb;
 	if(returnFd < 0) {
 		return -1;
@@ -97,15 +101,23 @@ int b_open (char * filename, int flags)
 
 	fcb = &fcbArray[returnFd];
 
+	/* Depending on the mode, we will open a file but
+	 * possibly have to create a new file if it doesn't exist, or overwrite a preexisting one */
+
+	/* CMD_CP2L */
+	/* Get inode and check if it exists. !inode = !NULL = exists */
 	fs_DIR* inode = getInode(filename);
 	if(!inode) {
 		
 		printf("b_open: %s does not yet exist.\n", filename);
 
+		/* CMD_CP2FS */
+		/* Check for create mode. */
 		if(flags & O_CREAT) {
 
 			printf("Creating %s\n", filename);
 
+			/* Create child, get parent and set parent. */
 			inode = createInode(I_FILE, filename);
 			char parentpath[MAX_FILENAME_SIZE];
 			getParentPath(parentpath, filename);
@@ -115,58 +127,69 @@ int b_open (char * filename, int flags)
 
 		} else {
 
-			// File doesn't exist and O_CREAT isn't set
+			/* File doesn't exist and we don't have CREATE mode. */
 			return -1;
 		}
 	}
 
+	/* Save the inode in the FCB. */
 	fcb->inode = inode;
+
+	//	release mutex
 	
-	// allocate buffer, change to bufSize+1, and change memcpy to strcpy
+	// allocate our buffer
+	/* Change to bufSize+1 and change memcpy to strcpy. */
 	fcb->buf = malloc (bufSize+1);
 	if (fcb->buf  == NULL)
 		{
-		close (fd);
-		fcb->linuxFd = -1;
+		// very bad, we can not allocate our buffer
+		close (fd);							// close linux file
+		fcb->linuxFd = -1; 	//Free FCB
 		return -1;
 		}
 		
-	fcb->buflen = 0; 
-	fcb->index = 0;
+	fcb->buflen = 0; 			// have not read anything yet
+	fcb->index = 0;			// have not read anything yet
 
 	printf("b_open: Opened file '%s' with fd %d\n", filename, fd);
 
-	return (returnFd);
+	return (returnFd);						// all set
 	}
 
 
-//writes to a buffer
+// Interface to write a buffer	
 int b_write (int fd, char * buffer, int count)
 {
 	if (startup == 0)
 	{
-		b_init();
+		b_init();  //Initialize our system
 	}
 
 	// check that fd is between 0 and (MAXFCBS - 1)
 	if ((fd < 0) || (fd >= MAXFCBS))
 	{
-		return (-1); 
+		return (-1); 					//invalid file descriptor
 	}
 
-	if (fcbArray[fd].linuxFd == -1)	
+	if (fcbArray[fd].linuxFd == -1)		//File not open for this descriptor
 	{
 		return -1;
 	}
+
+
+	/* Calculate free space in buffer of FCB. */
 
 	b_fcb* fcb = &fcbArray[fd];
 	int freeSpace = bufSize - fcb->index;
 
 	printf("b_write: count=%d, fcb->index=%d, freeSpace=%d\n", count, fcb->index, freeSpace);
 
-	fcb->mode = WRITE; //set file to write last bytes in b_close
+	fcb->mode = WRITE; // set the file to write the last bytes in b_close
 
-	//calculate the amount of bytes to put at the end of the buffer
+	/* Calculate how many bytes can fit at the end of the buffer and if there is any overflow.
+	 * Copy these chunks to the buffer and update index.
+	 */
+
 	int copyLength = freeSpace > count ? count : freeSpace;
 	int secondCopyLength = count - copyLength;
 
@@ -175,17 +198,25 @@ int b_write (int fd, char * buffer, int count)
 	fcb->index += copyLength;
 	fcb->index %= bufSize;
 
+	/* If there is a second segment, write out the full buffer,
+	 * reset buffer and copy second segment to buffer.
+	 */
+
 	if(secondCopyLength != 0)
 	{
 		printf("Writing buffer to fd.\n"); 
-		uint64_t indexOfBlock = getNextFreeBlock();
+		uint64_t indexOfBlock = getFreeBlock();
+
+		//write(fcbArray[fd].linuxFd, fcb->buf, BUFSIZE);
 
 		if (indexOfBlock == -1){
 			printf("There is not enough free space!");
 			return 0;
 		} else {
+
+			/* Write block of data to disk. */
 			printf("\n\nFCB buff:\n\n%s", fcb->buf);
-			writeBufferToInode(fcb->inode, fcb->buf, copyLength + secondCopyLength, indexOfBlock);
+			writeBufInode(fcb->inode, fcb->buf, copyLength + secondCopyLength, indexOfBlock);
 		}
 		fcb->index = 0;
 		printf("Copying second segment to fcb->buf+%d: %d bytes\n", fcb->index, secondCopyLength);
@@ -194,21 +225,29 @@ int b_write (int fd, char * buffer, int count)
 		fcb->index %= bufSize;
 	}
 
+	// Copy above in b_close
+	// Return total bytes copied to buffer.
 	return copyLength + secondCopyLength;
 }
 
 
 
-// reads data into the fcb
+/*
+ * Copies 'count' bytes from the FileControlBlock corresponding to 'fd'.
+ * Reads new data into the FCB if 'count' is greater than available data.
+ */
 int b_read (int fd, char * buffer, int count) {
   struct b_fcb* fcb = &fcbArray[fd];
+  //fcb->mode = NoWRITE;
   int bytesRemaining =fcb->buflen-fcb->index;
+
 	printf("b_read: index = %d\n", fcb->index);
 	printf("b_read: buflen = %d\n", fcb->buflen);
 
   if(bytesRemaining>count)
   {
 
+    /* Copy completely from existing buffer */
     printf("Existing: Copying to %ld from %ld for %ld bytes.\n", buffer, fcb->buf+fcb->index, count);
     memcpy(buffer, fcb->buf+fcb->index, count);
     fcb->index += count;
@@ -217,6 +256,7 @@ int b_read (int fd, char * buffer, int count) {
 
   else
   {
+    /* Copy tail-end of existing buffer */
     printf("Tail: Copying to %ld from %ld for %ld bytes.\n", buffer, fcb->buf+fcb->index, bytesRemaining);
     memcpy(buffer, fcb->buf+fcb->index, bytesRemaining);
 
@@ -227,14 +267,17 @@ int b_read (int fd, char * buffer, int count) {
 	return bytesRemaining;
     }
 
+    /* Check that the inode has a direct block pointer to read from. */
     if(fcb->blockIndex > fcb->inode->numDirectBlockPointers - 1)
     {
 	printf("Block Index out-of-bounds.\n");
 	return 0;
     }
 
+    /* Read the next data block pointer and reset the index. */
     int blockNumber = fcb->inode->directBlockPointers[fcb->blockIndex]; 
     LBAread(fcb->buf, 1, blockNumber);
+    //read(fcb->linuxFileDescriptor, fcb->buffer, FILE_BUFFER_SIZE);
     fcb->blockIndex++;
 
     printf("Read new data.\n");
@@ -242,12 +285,14 @@ int b_read (int fd, char * buffer, int count) {
     printf("%s\n", fcb->buf);
     printf("*********************************************************\n");
     fcb->index = 0;
+    //fcb->readMarker = fcb->buffer;
     int newBufferSize = fcb->buflen = strlen(fcb->buf);
 		printf("%d bytes read.\n", newBufferSize);
 
-	//set eof if the number of bytes read is < buffersize
+    /* Set end of file if # bytes read is less than the bufferSize. */
     if(newBufferSize<bufSize)
     {
+	/* End of file read to buffer*/
 	fcb->eof = 1;
     }
     int remainderOfCount = count - bytesRemaining;
@@ -261,16 +306,18 @@ int b_read (int fd, char * buffer, int count) {
   }
 }
 	
-//closes file
+// Interface to Close the file	
 void b_close (int fd)
 {
 	b_fcb* fcb = &fcbArray[fd];
 	printf("Closing file %d.\n", fd);
 
+	//write(fcb->linuxFd, fcb->buf, fcb->index);	//Write any remaining bytes to fd.
+
 	if (fcb->mode == WRITE && fcb->index > 0)
-	{
+	{ // write last bytes
 		printf("File was in write mode.\n");
-		uint64_t indexOfBlock = getNextFreeBlock();
+		uint64_t indexOfBlock = getFreeBlock();
 		if (indexOfBlock == -1)
 		{
 			printf("There is not enough free space!");
@@ -279,15 +326,15 @@ void b_close (int fd)
 		
 		else
 		{
-			// write any remaining bytes (index) to a new block
+			/* Write any remaining bytes (index) to a new block. */
 			printf("Writing remaining bytes.\n");
-			writeBufferToInode(fcb->inode, fcb->buf, fcb->index, indexOfBlock);
+			writeBufInode(fcb->inode, fcb->buf, fcb->index, indexOfBlock);
 		}
 	
 	}
 
-	close (fcb->linuxFd);
-	free (fcb->buf);
-	fcb->buf = NULL;	
-	fcb->linuxFd = -1;
+	close (fcb->linuxFd);		// close the linux file handle
+	free (fcb->buf);			// free the associated buffer
+	fcb->buf = NULL;			// Safety First
+	fcb->linuxFd = -1;			// return this FCB to list of available FCB's 
 }

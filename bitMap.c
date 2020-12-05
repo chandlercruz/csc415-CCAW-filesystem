@@ -1,28 +1,30 @@
 /**************************************************************
-* Class:  CSC-415
-* Name: Team CCAW - Aaron Colmenares, Chandler Cruz, Wesley Xu, Chaoyi Ying
+* Class:  CSC-415-02 Summer 2020
+* Name: Aaron Colmenares, Chandler Cruz, Wesley Xu, Chaoyi Ying
 * Student ID: 916913613 (Aaron), 917048657 (Chandler), 916260714 (Wesley), 918810235 (Chaoyi)
-* Project: Basic File System 
+* Project: Basic File System - PentaFS
 *
 * File: bitMap.c
 *
-* Description: Has the  methods that modify the free-space bit vector
+* Description: This file defines the methods that change our free-space bit vector.
 *
 **************************************************************/
+
 #include "bitMap.h"
 
-void setBitmap(int A[], int k)
+void setBitMap(int A[], int k)
 {
     A[k / 32] |= 1 << (k % 32);
 }
 
-void clearBitmap(int A[], int k)
+void clearBitMap(int A[], int k)
 {
     A[k / 32] &= ~(1 << (k % 32));
 }
 
-int findBitmap(int A[], int k)
+int findBitMap(int A[], int k)
 {
     return ((A[k / 32] & (1 << (k % 32))) != 0);
 }
+
 
