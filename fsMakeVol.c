@@ -1,23 +1,23 @@
 /**************************************************************
-* Class:  CSC-415-02 Summer 2020
+* Class:  CSC-415
 * Name: Aaron Colmenares, Chandler Cruz, Wesley Xu, Chaoyi Ying
-* Student ID: 916913613 (Aaron), 917048657 (Chandler), 916260714 (Wesley), 918810235 (Chaoyi)
-* Project: Basic File System - PentaFS
+* Student ID: 916913613, 917048657, 916260714, 918810235
+* Project: Basic File System
 *
 * File: b_io.c
-*
-* Description: This program is used to create a volume for the
-*              Penta File System. It holds the free-space bit vector
-*		and the inodes on disk.
+* 
+* Description: This file allocates the file system's volume
+*		and holds the free-space bit vector and inodes
+* 		on disk (for persistence)
 *
 **************************************************************/
 
 #include "fsMakeVol.h"
 
-int initialized = 0; //Variable to check if the VCB is initialized
+int initialized = 0; //is the VCB initialized or not
 
-//Variables that hold the information of our volume control block
-char header[16] = "*****PentaFS****";
+//Variables of volume control block
+char header[10] = "FileSystem";
 uint64_t volumeSize;
 uint64_t blockSize;
 uint64_t diskSizeBlocks;
@@ -28,12 +28,9 @@ uint32_t totalInodes;
 uint32_t totalInodeBlocks;
 uint32_t freeMapSize;
 
-fs_VCB* openVCB_p; //pointer to our volume control block
-
-//Methods explained in the fsMakeVol.h file */
+fs_VCB* openVCB_p; //pointer to volume control block
 
 uint64_t ceilDiv(uint64_t a, uint64_t b) {
-  //Rounds up integer division. */
   return (a + b - 1) / b;
 }
 
@@ -44,11 +41,11 @@ int allocateVCB(fs_VCB** vcb_p) {
 
 uint64_t fsRead(void* buf, uint64_t blockCount, uint64_t blockPosition) {
   if(!initialized) {
-    printf("fsRead: System not initialized.\n");
+    printf("File system isn't initialized.\n");
     return 0;
   }
   if(blockPosition + blockCount > openVCB_p->diskSizeBlocks) {
-    printf("fsRead: Invalid block range.\n");
+    printf("Invalid block range.\n");
     return 0;
   }
   LBAread(buf, blockCount, blockPosition);
@@ -57,11 +54,11 @@ uint64_t fsRead(void* buf, uint64_t blockCount, uint64_t blockPosition) {
 
 uint64_t fsWrite(void* buf, uint64_t blockCount, uint64_t blockPosition) {
   if(!initialized) {
-    printf("fsWrite: System not initialized.\n");
+    printf("File System isn't initialized.\n");
     return 0;
   }
   if(blockPosition + blockCount > openVCB_p->diskSizeBlocks) {
-    printf("fsWrite: Invalid block range.\n");
+    printf("Invalid block range.\n");
     return 0;
   }
   LBAwrite(buf, blockCount, blockPosition);
@@ -74,11 +71,11 @@ uint64_t fsWrite(void* buf, uint64_t blockCount, uint64_t blockPosition) {
 
 void fsFree(void* buf, uint64_t blockCount, uint64_t blockPosition) {
   if(!initialized) {
-    printf("fsFree: System not initialized.\n");
+    printf("File System isn't initialized.\n");
     return;
   }
   if(blockPosition + blockCount > openVCB_p->diskSizeBlocks) {
-    printf("fsFree: Invalid block range.\n");
+    printf("Invalid block range.\n");
     return;
   }
   for(int i=0; i<blockCount; i++) {
@@ -87,28 +84,24 @@ void fsFree(void* buf, uint64_t blockCount, uint64_t blockPosition) {
   writeVCB();
 }
 
-//Method that gets the next free block, however it does not look for contiguous ones, just the next available one
-//if none available, return a -1 to show that
+//gets next free block
 uint64_t getFreeBlock(){
   for (int index = 0; index < diskSizeBlocks; index++)
   {
     if(findBitMap(openVCB_p->freeMap, index) == 0) {
-
-      return index; //The position in the VolumeSpaceArray
+      return index; //returns index in the VolumeSpaceArray
     }
-    
   }
-
  return -1;
 }
 
 uint64_t readVCB() {
   if(!initialized) {
-    printf("readVCB: System not initialized.\n");
+    printf("File System isn't initialized.\n");
     return 0;
   }
 
-  //Read VCB from disk to openVCB_p
+  //reads Volume Control Block from disk (persistence)
   uint64_t blocksRead = LBAread(openVCB_p, totalVCBBlocks, VCB_START_BLOCK);
   printf("Read VCB in %d blocks starting at block %d.\n", totalVCBBlocks, VCB_START_BLOCK);
   return blocksRead;
@@ -116,7 +109,7 @@ uint64_t readVCB() {
 
 uint64_t writeVCB() {
   if(!initialized) {
-    printf("writeVCB: System not initialized.\n");
+    printf("File System isn't initialized.\n");
     return 0;
   }
 
@@ -132,14 +125,14 @@ fs_VCB* getVCB() {
 
 void initializeVCB() {
   if(!initialized) {
-    printf("initializeVCB: System not initialized.\n");
+    printf("System isn't initialized.\n");
     return;
   }
-  printf("------------------------Initializing VCB------------------------\n");
+  printf("INIT VCB...\n");
  
   sprintf(openVCB_p->header, "%s", header); 
  
-  //Set information on volume sizes and block locations
+  //information on VCB's volume sizes and block locations
   openVCB_p->volumeSize = volumeSize;
   openVCB_p->blockSize = blockSize;
   openVCB_p->diskSizeBlocks = diskSizeBlocks;
@@ -148,67 +141,60 @@ void initializeVCB() {
   openVCB_p->inodeStartBlock = inodeStartBlock;
   openVCB_p->totalInodes = totalInodes;
   openVCB_p->totalInodeBlocks = totalInodeBlocks;
-  printf("initVCB: totalInodeBlocks %ld", openVCB_p->totalInodeBlocks);
-
+  printf("TOTALINODEBLOCKS %ld", openVCB_p->totalInodeBlocks);
   openVCB_p->freeMapSize = freeMapSize;
 
-  //Initialize freeBlockMap to all 0's
+  //initialize freeMap
   for(int i=0; i<freeMapSize; i++) {
     openVCB_p->freeMap[i] = 0;
   }
 
-  //Set bits in freeMap for VCB and inodes
+  //set the bits in freeMap
   for(int i=0; i<inodeStartBlock+totalInodeBlocks; i++) {
     setBitMap(openVCB_p->freeMap, i);
   }
-
   printVCB();
   writeVCB();
 }
 
 void initializeInodes() {
-  if(!initialized) {
-    printf("initializeInodes: System not initialized.\n");
-    return;
+ 	if(!initialized) {
+  		printf("System isn' initialized.\n");
+  	  	return;
+  	}
+
+  	printf("INIT INODES..\n");
+
+  	//allocates and initializes inodes
+  	fs_DIR* inodes = calloc(totalInodeBlocks, blockSize);
+  	inodes[0].id = 0;
+  	inodes[0].inUse = 1;
+  	inodes[0].type = I_DIR;
+  	strcpy(inodes[0].name, "root");
+  	strcpy(inodes[0].path, "/root");
+	inodes[0].lastModificationTime = time(0);
+  	inodes[0].lastAccessTime = time(0);
+  	inodes[0].numDirectBlockPointers = 0;
+
+  	for(int i = 1; i<totalInodes; i++) {
+    		inodes[i].id = i;
+    		inodes[i].inUse = 0;
+    		inodes[i].type = I_UNUSED;
+    		strcpy(inodes[i].parent, "");
+    		strcpy(inodes[i].name, "");
+    		inodes[i].lastAccessTime = 0;
+    		inodes[i].lastModificationTime = 0;
+    
+    //set direct block pointers to -1
+    	for(int j=0; j<MAX_DATABLOCK_POINTERS; j++) {
+      		inodes[i].directBlockPointers[j] = INVALID_DATABLOCK_POINTER;
+    	}
+    	inodes[i].numDirectBlockPointers = 0;
   }
 
-  printf("-----------------------Initializing inodes----------------------\n");
-
-  printf("Total disk blocks: %ld, total inodes: %d, total inode blocks: %d\n", diskSizeBlocks, totalInodes, totalInodeBlocks);
-
-  //Allocate and initialize inodes. First inode is root directory and has id=1
-  fs_DIR* inodes = calloc(totalInodeBlocks, blockSize);
-  inodes[0].id = 0;
-  inodes[0].inUse = 1;
-  inodes[0].type = I_DIR;
-  strcpy(inodes[0].name, "root");
-  strcpy(inodes[0].path, "/root");
-  inodes[0].lastAccessTime = time(0);
-  inodes[0].lastModificationTime = time(0);
-  inodes[0].numDirectBlockPointers = 0;
-
-  //Do all other inodes
-  for(int i = 1; i<totalInodes; i++) {
-    inodes[i].id = i;
-    inodes[i].inUse = 0;
-    inodes[i].type = I_UNUSED;
-    strcpy(inodes[i].parent, "");
-    strcpy(inodes[i].name, "");
-    inodes[i].lastAccessTime = 0;
-    inodes[i].lastModificationTime = 0;
-    
-    //Set all direct block pointers to -1 (invalid)
-    for(int j=0; j<MAX_DATABLOCK_POINTERS; j++) {
-      inodes[i].directBlockPointers[j] = INVALID_DATABLOCK_POINTER;
-    }
-    inodes[i].numDirectBlockPointers = 0;
-    
-  }
-
-  //Write inodes to disk
+  //write inodes to disk (persistence)
   char* char_p = (char*) inodes;
   LBAwrite(char_p, totalInodeBlocks, inodeStartBlock);
-  printf("Wrote %d inodes of size %ld bytes each starting at block %d.\n", totalInodes, sizeof(fs_DIR), inodeStartBlock);
   free(inodes);
 }
 
@@ -218,7 +204,7 @@ void printVCB() {
   char* char_p = (char*)openVCB_p;
   char ascii[width+1];
   sprintf(ascii, "%s", "................");
-  printf("--------------------------Printing VCB--------------------------\n");
+  printf("PRINTING VolumeControlBlock..\n");
   for(int i = 0; i<size; i++) {
     printf("%02x ", char_p[i] & 0xff);
     if(char_p[i]) {
@@ -237,11 +223,11 @@ void printVCB() {
       sprintf(ascii, "%s", "................");
     }
   }
-  printf("VCB Size: %d bytes\n", size);
+  printf("VolumeControlBlock Size: %d bytes\n", size);
 }
 
 void init(uint64_t _volumeSize, uint64_t _blockSize) {
-  printf("------------------------------Init------------------------------\n");
+  printf("INIT\n");
   printf("volumeSize: %ld\n", volumeSize = _volumeSize);
   printf("blockSize: %ld\n", blockSize = _blockSize);
   printf("diskSizeBlocks: %ld\n", diskSizeBlocks = ceilDiv(volumeSize, blockSize));
@@ -253,66 +239,60 @@ void init(uint64_t _volumeSize, uint64_t _blockSize) {
   printf("inodeSizeBytes: %ld\n", sizeof(fs_DIR));
   printf("inodeSizeBlocks: %ld\n", ceilDiv(sizeof(fs_DIR), blockSize));
 
-  //Allocate the VCB in memory
+  //allocate VolumeControlBlock in memory
   int vcbSize = allocateVCB(&openVCB_p);
-  printf("VCB allocated in %d blocks.\n", vcbSize);
-
-  initialized = 1;
-  printf("----------------------------End Init----------------------------\n");
+  printf("VolumeControlBlock allocated in %d blocks.\n", vcbSize);
+  initialized = 1; //setting initialized flag to true
 }
 
 int createVolume(char* volumeName, uint64_t _volumeSize, uint64_t _blockSize) {
-  printf("------------------------Creating Volume-------------------------\n");
-  //Check whether volume exists already
+  printf("CREATING VOLUME...\n");
   if(access(volumeName, F_OK) != -1) {
-    printf("Cannot create volume '%s'. Volume already exists.\n", volumeName);
+    printf("Volume already exists.\n");
     return -3;
   }
 
   uint64_t existingVolumeSize = _volumeSize;
   uint64_t existingBlockSize = _blockSize;
 
-  //Initialize the volume with the fsLow library
+  //initialize volume
   int retVal = startPartitionSystem (volumeName, &existingVolumeSize, &existingBlockSize);
 
   printf("Opened %s, Volume Size: %llu;  BlockSize: %llu; Return %d\n", volumeName, (ull_t)existingVolumeSize, (ull_t)existingBlockSize, retVal);
 
-  //Format the disk if the volume was opened properly
+  //format disk
   if(!retVal) {
     init(_volumeSize, _blockSize);
     initializeVCB();
     initializeInodes();
   }
-
   closeVolume();
   return retVal;
 }
 
 void openVolume(char* volumeName) {
-  printf("--------------------------Opening Volume------------------------\n");
+  printf("OPENING VOLUME...\n");
   if(!initialized) {
     uint64_t existingVolumeSize;
     uint64_t existingBlockSize;
-
     int retVal =  startPartitionSystem(volumeName, &existingVolumeSize, &existingBlockSize);
     if(!retVal) {
       init(existingVolumeSize, existingBlockSize);
       readVCB();
-
       printVCB();
     }
   } else {
-    printf("Can't open volume '%s'. Another volume is already open.\n", volumeName);
+    printf("Volume was already opened\n");
   }
 }
 
 void closeVolume() {
-  printf("--------------------------Closing Volume------------------------\n");
+  printf("CLOSING VOLUME...\n");
   if(initialized) {
     closePartitionSystem();
     free(openVCB_p);
     initialized = 0;
   } else {
-    printf("Can't close volume. Volume not open.\n");
+    printf("Volume is not open yet, cannot be closed.\n");
   }
 }
