@@ -8,13 +8,12 @@
 *
 * Description: Opens the file system volume and prints out the inode from the system.
 **************************************************************/
-
 #include "fsMakeVol.h"
 #include "mfs.h"
 
 char inodeTypenameBuffer[24];
 
-void printInode(fs_DIR* inode) {
+void printInode(mfs_DIR* inode) {
   printf("Printing Inode......\n");
   printf("id: %ld\n", inode->id);
   printf("type: %s\n", getInodeTypeName(inodeTypenameBuffer, inode->type));
@@ -22,7 +21,7 @@ void printInode(fs_DIR* inode) {
   printf("path: %s\n", inode->path);
   printf("parent: %s\n", inode->parent);
   
-  // print children
+  /* Print children. */
   printf("children: ");
   for(int i=0; i < inode->numChildren; i++) {
     printf("%s ", inode->children[i]);
@@ -31,7 +30,7 @@ void printInode(fs_DIR* inode) {
 
   printf("numChildren: %d\n", inode->numChildren);
 
-  // print block pointers
+  /* Print block pointers. */
   printf("directBlockPointers: ");
   for(int i=0; i < inode->numDirectBlockPointers; i++) {
     printf("%d ", inode->directBlockPointers[i]);
@@ -43,7 +42,7 @@ void printInode(fs_DIR* inode) {
   printf("sizeInBytes: %ld\n", inode->sizeInBytes);
   printf("lastAccessTime: %lld\n", (long long) inode->lastAccessTime);
   printf("lastModificationTime: %lld\n", (long long) inode->lastModificationTime);
-  printf("--------------------------------\n");
+  printf("----------------------------------------------------------------\n");
 }
 
 int main(int argc, char* argv[]) {
@@ -59,16 +58,15 @@ int main(int argc, char* argv[]) {
 
   openVolume(volumeName);
 
-  fs_init();
+  mfs_init();
 
-  for(int i=0; i<getVCB()->inodes; i++) {
-    fs_DIR* inode = getInodeByID(i);
+  for(int i=0; i<getVCB()->totalInodes; i++) {
+    mfs_DIR* inode = getInodeByID(i);
     printInode(inode);
   }
 
-  fs_close();
+  mfs_close();
 
   closeVolume();
 
 }
-
