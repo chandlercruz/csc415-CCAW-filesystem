@@ -39,7 +39,6 @@ typedef struct b_fcb {
 	} b_fcb;
 	
 b_fcb fcbArray[MAXFCBS]; //FCB array that holds the files
-
 int startup = 0;	//has been initialized or not
 
 //initializes the file system
@@ -93,12 +92,8 @@ int b_open (char * filename, int flags)
 
 	fs_DIR* inode = getInode(filename);
 	if(!inode) {
-		
-		printf("b_open: %s does not yet exist.\n", filename);
-
+		printf("Open failed, %s does not yet exist.\n", filename);
 		if(flags & O_CREAT) {
-
-			printf("Creating %s\n", filename);
 			inode = createInode(I_FILE, filename);
 			char parentpath[MAX_FILENAME_SIZE];
 			getParentPath(parentpath, filename);
@@ -122,7 +117,7 @@ int b_open (char * filename, int flags)
 		}	
 	fcb->buflen = 0; 
 	fcb->index = 0;	
-	printf("b_open: Opened file '%s' with fd %d\n", filename, fd);
+	printf("Opened file '%s' with fd %d\n", filename, fd);
 	return (returnFd);
 	}
 
@@ -147,34 +142,26 @@ int b_write (int fd, char * buffer, int count)
 
 	b_fcb* fcb = &fcbArray[fd];
 	int freeSpace = bufSize - fcb->index;
-
-	printf("b_write: count=%d, fcb->index=%d, freeSpace=%d\n", count, fcb->index, freeSpace);
-
 	fcb->mode = WRITE;
 
 	//calculate the amount of bytes to put at the end of the buffer
 	int copyLength = freeSpace > count ? count : freeSpace;
 	int secondCopyLength = count - copyLength;
-
-	printf("Copying first segment to fcb->buf+%d: %d bytes\n", fcb->index, copyLength);
 	memcpy(fcb->buf+fcb->index, buffer, copyLength);
 	fcb->index += copyLength;
 	fcb->index %= bufSize;
 
 	if(secondCopyLength != 0)
 	{
-		printf("Writing buffer to fd.\n"); 
 		uint64_t indexOfBlock = getFreeBlock();
-
 		if (indexOfBlock == -1){
-			printf("There is not enough free space!");
+			printf("Not enough free space.\n");
 			return 0;
 		} else {
 			printf("\n\nFCB buff:\n\n%s", fcb->buf);
 			writeBufInode(fcb->inode, fcb->buf, copyLength + secondCopyLength, indexOfBlock);
 		}
 		fcb->index = 0;
-		printf("Copying second segment to fcb->buf+%d: %d bytes\n", fcb->index, secondCopyLength);
 		memcpy(fcb->buf+fcb->index, buffer+copyLength, secondCopyLength);
 		fcb->index += secondCopyLength;
 		fcb->index %= bufSize;
@@ -186,20 +173,16 @@ int b_write (int fd, char * buffer, int count)
 int b_read (int fd, char * buffer, int count) {
   struct b_fcb* fcb = &fcbArray[fd];
   int bytesRemaining =fcb->buflen-fcb->index;
-	printf("b_read: index = %d\n", fcb->index);
-	printf("b_read: buflen = %d\n", fcb->buflen);
   if(bytesRemaining>count)
   {
-    printf("Existing: Copying to %ld from %ld for %ld bytes.\n", buffer, fcb->buf+fcb->index, count);
     memcpy(buffer, fcb->buf+fcb->index, count);
     fcb->index += count;
     return count;
   } else {
-    printf("Tail: Copying to %ld from %ld for %ld bytes.\n", buffer, fcb->buf+fcb->index, bytesRemaining);
     memcpy(buffer, fcb->buf+fcb->index, bytesRemaining);
     if(fcb->eof)
     {
-	printf("EOF reached. Exiting.\n");
+	//eof reached
 	fcb->index += bytesRemaining;
 	return bytesRemaining;
     }
@@ -211,20 +194,14 @@ int b_read (int fd, char * buffer, int count) {
     int blockNumber = fcb->inode->directBlockPointers[fcb->blockIndex]; 
     LBAread(fcb->buf, 1, blockNumber);
     fcb->blockIndex++;
-    printf("Read new data.\n");
-    printf("*********************************************************\n");
-    printf("%s\n", fcb->buf);
-    printf("*********************************************************\n");
     fcb->index = 0;
     int newBufferSize = fcb->buflen = strlen(fcb->buf);
-	printf("%d bytes read.\n", newBufferSize);
     if(newBufferSize<bufSize)
     {
 	fcb->eof = 1;
     }
     int remainderOfCount = count - bytesRemaining;
     int secondSegmentCount = newBufferSize>remainderOfCount?remainderOfCount:newBufferSize;
-    printf("Second: Copying to %ld from %ld for %ld bytes.\n", buffer+bytesRemaining, fcb->buf+fcb->index, secondSegmentCount);
     memcpy(buffer+bytesRemaining, fcb->buf+fcb->index, secondSegmentCount);
     fcb->index+=secondSegmentCount;
     return bytesRemaining + secondSegmentCount;
@@ -236,18 +213,16 @@ void b_close (int fd)
 {
 	b_fcb* fcb = &fcbArray[fd];
 	printf("Closing file %d.\n", fd);
-	if (fcb->mode == WRITE && fcb->index > 0)
-	{
+	if (fcb->mode == WRITE && fcb->index > 0) {
 		printf("File was in write mode.\n");
 		uint64_t indexOfBlock = getFreeBlock();
-		if (indexOfBlock == -1) {
-			printf("There is not enough free space!");
-			return;
-		} else {
-			printf("Writing remaining bytes.\n");
+		if (indexOfBlock != -1) {
+			printf("Writing remaining bytes from buffer.\n");
 			writeBufInode(fcb->inode, fcb->buf, fcb->index, indexOfBlock);
+		} else {
+			printf("Not enough free space.\n");
+			return;
 		}
-	
 	}
 	close (fcb->linuxFd);
 	free (fcb->buf);
