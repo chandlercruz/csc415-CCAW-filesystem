@@ -657,7 +657,7 @@ void processcommand (char * cmd)
 		if (strcmp(dispatchTable[i].command, cmdv[0]) == 0)
 			{
 			dispatchTable[i].func(cmdc,cmdv);
-			printf("End dispatch\n");
+			//printf("End dispatch\n");
 			free (cmdv);
 			cmdv = NULL;
 			return;
