@@ -12,10 +12,10 @@
 
 #include "mfs.h"
 
-fs_DIR* inodes;
+fs_DIR* inodesArr;
 
 //set number of inodes in array
-size_t numberOfElement = sizeof(inodes)/sizeof(inodes[0]);
+size_t numberOfElement = sizeof(inodesArr)/sizeof(inodesArr[0]);
 
 void fs_init() {
   printf("Initializing\n");
@@ -24,10 +24,10 @@ void fs_init() {
   printf("Total Inode Blocks is %ld, blockSize is %ld\n", getVCB()->inodeBlocks, getVCB()->blockSize);
   printf("Allocating %ld bytes.\n", totalBytes);
 
-  inodes = calloc(getVCB()->inodeBlocks, getVCB()->blockSize);
-  printf("Inodes allocated at %p.\n", inodes);
+  inodesArr = calloc(getVCB()->inodeBlocks, getVCB()->blockSize);
+  printf("Inodes allocated at %p.\n", inodesArr);
 
-  uint64_t blocksRead = LBAread(inodes, getVCB()->inodeBlocks, getVCB()->inodeBlock);
+  uint64_t blocksRead = LBAread(inodesArr, getVCB()->inodeBlocks, getVCB()->inodeBlock);
   printf("Loaded %ld blocks into cache.\n", blocksRead);
   
   if(blocksRead != getVCB()->inodeBlocks) {
@@ -43,7 +43,7 @@ void fs_init() {
 
 void writeInodes() {
   printf("Writing Inode......");
-  LBAwrite(inodes, getVCB()->inodeBlocks, getVCB()->inodeBlock);
+  LBAwrite(inodesArr, getVCB()->inodeBlocks, getVCB()->inodeBlock);
   printf(" ");
 }
 
@@ -129,10 +129,10 @@ fs_DIR* getInode(const char *pathname){
   //Try to find node and return it, null if not found
   printf("Searching path: '%s'\n", pathname);
   for (size_t i = 0; i < getVCB()->inodes; i++) {
-    printf("\tInode path: '%s'\n", inodes[i].path);
-    if (strcmp(inodes[i].path, pathname) == 0) {
+    printf("\tInode path: '%s'\n", inodesArr[i].path);
+    if (strcmp(inodesArr[i].path, pathname) == 0) {
       printf(" ");
-      return &inodes[i];
+      return &inodesArr[i];
     }
   }
   printf("Inode path '%s' does not exist.\n", pathname);
@@ -150,9 +150,9 @@ fs_DIR* getFreeInode(){
   fs_DIR* returnediNode;
 
   for (size_t i = 0; i < getVCB()->inodes; i++) {
-    if (inodes[i].inUse == 0) { //check the status of node
-      inodes[i].inUse = 1; //change status to be used
-      returnediNode = &inodes[i];
+    if (inodesArr[i].inUse == 0) { //check the status of node
+      inodesArr[i].inUse = 1; //change status to be used
+      returnediNode = &inodesArr[i];
       printf(" ");
       return returnediNode;
     }
@@ -288,7 +288,7 @@ int checkValidityOfPath(){
 
 fs_DIR* getInodeByID(int id) {
   if(0 <= id < getVCB()->inodes) {
-    return &inodes[id];
+    return &inodesArr[id];
   } else {
     return NULL;
   }
@@ -350,7 +350,7 @@ void freeInode(fs_DIR* node){
 
 void fs_close() {
   printf("fs close\n");
-  free(inodes);
+  free(inodesArr);
 }
  
 
