@@ -16,32 +16,29 @@
 char inodeTypenameBuffer[24];
 
 void printInode(fs_DIR* inode) {
-  printf("--------------------------Printing Inode------------------------\n");
-  printf("id: %ld\n", inode->id);
-  printf("type: %s\n", getInodeTypeName(inodeTypenameBuffer, inode->type));
-  printf("name: %s\n", inode->name);
-  printf("path: %s\n", inode->path);
-  printf("parent: %s\n", inode->parent);
-  
-  //print inode children
-  printf("children: ");
-  for(int i=0; i < inode->numChildren; i++) {
+  printf("PRINTING INODE\n");
+  printf("ID: %ld\n", inode->id);
+  printf("TYPE: %s\n", getInodeTypeName(inodeTypenameBuffer, inode->type));
+  printf("NAME: %s\n", inode->name);
+  printf("PATH: %s\n", inode->path);
+  printf("PARENT: %s\n", inode->parent);
+  printf("INODE CHILDREN: ");
+  for(int i=0; i < inode->numChildren; i++) {   //print inode children
     printf("%s ", inode->children[i]);
   }
   printf("\n");
-
-  printf("numChildren: %d\n", inode->numChildren);
+  printf("# OF CHILDREN: %d\n", inode->numChildren);
 
   //print inode block pointers
-  printf("directBlockPointers: ");
+  printf("DIRECTBLOCKPOINTERS: ");
   for(int i=0; i < inode->numDirectBlockPointers; i++) {
     printf("%d ", inode->directBlockPointers[i]);
   }
-  printf("\nnumDirectBlockPointers: %d\n", inode->numDirectBlockPointers);
-  printf("sizeInBlocks: %ld\n", inode->sizeInBlocks);
-  printf("sizeInBytes: %ld\n", inode->sizeInBytes);
-  printf("lastAccessTime: %lld\n", (long long) inode->lastAccessTime);
-  printf("lastModificationTime: %lld\n", (long long) inode->lastModificationTime);
+  printf("\n# OF DIRECTBLOCKPOINTERS: %d\n", inode->numDirectBlockPointers);
+  printf("SIZEINBLOCKS: %ld\n", inode->sizeInBlocks);
+  printf("SIZEINBYTES: %ld\n", inode->sizeInBytes);
+  printf("LAST ACCESS TIME: %lld\n", (long long) inode->lastAccessTime);
+  printf("LAST MOD. TIME: %lld\n", (long long) inode->lastModificationTime);
 }
 
 int main(int argc, char* argv[]) {
