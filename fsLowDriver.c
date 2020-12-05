@@ -1,8 +1,8 @@
 /**************************************************************
 * Class:  CSC-415
-* Name: Professor Bierman
-* Student ID: N/A
-* Project: Basic File System
+* Name: Team CCAW - Aaron Colmenares, Chandler Cruz, Wesley Xu, Chaoyi Ying
+* Student ID: 916913613, 917048657, 916260714, 918810235
+* Project: Basic File System 
 *
 * File: fsLowDriver.c
 *
